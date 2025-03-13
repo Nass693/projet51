@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: express-gateway
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: express-gateway
+  template:
+    metadata:
+      labels:
+        app: express-gateway
+    spec:
+      imagePullSecrets:
+        - name: nass-imp  
+      containers:
+        - name: express-gateway
+          image: europe-west9-docker.pkg.dev/arched-media-447008-i1/my-repo/gateway-api:latest 
+          ports:
+            - containerPort: 5005
+          env:
+            - name: NODE_ENV
+              value: "production"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: express-gateway-service
+  namespace: default
+spec:
+  selector:
+    app: express-gateway
+  ports:
+    - protocol: TCP
+      port: 5005
+      targetPort: 5005
+  type: ClusterIP

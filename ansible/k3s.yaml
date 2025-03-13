@@ -1,0 +1,70 @@
+---
+- name: Deploy K3s Cluster
+  hosts: k3s-master
+  become: yes
+  tasks:
+    - name: Installer les dépendances sur k3s-master
+      yum:
+        name: ["curl", "wget"]
+        state: present
+
+    - name: Télécharger le script k3s d'installation sur le master
+      get_url:
+        url: https://get.k3s.io
+        dest: /tmp/install-k3s.sh
+        mode: '0755'
+
+    - name: Installer K3s master
+      shell: /tmp/install-k3s.sh
+      environment:
+        INSTALL_K3S_EXEC: "--write-kubeconfig-mode 644"
+
+    - name: Recupération du token k3s 
+      shell: cat /var/lib/rancher/k3s/server/node-token
+      register: k3s_token
+      changed_when: false
+
+    - name: Set token K3s token 
+      set_fact:
+        k3s_token: "{{ k3s_token.stdout }}"
+
+    - name: Récupération adresse IP
+      shell: hostname -I | awk '{print $1}'
+      register: master_ip
+      changed_when: false
+
+    - name: Set l'ip du master
+      set_fact:
+        master_ip: "{{ master_ip.stdout }}"
+
+    - name: récupération de la version stable kubectl 
+      shell: curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt
+      register: kubectl_version
+
+    - name: Install kubectl
+      get_url:
+        url: "https://storage.googleapis.com/kubernetes-release/release/{{ kubectl_version.stdout }}/bin/linux/amd64/kubectl"
+        dest: /usr/local/bin/kubectl
+        mode: '0755'
+
+
+- name: Install K3s sur les worker
+  hosts: k3s-nodes
+  become: yes
+  tasks:
+    - name: Installer les dépendances sur les workers
+      yum:
+        name: ["curl", "wget"]
+        state: present
+
+    - name: télécharger le script d'install K3s
+      get_url:
+        url: https://get.k3s.io
+        dest: /tmp/install-k3s.sh
+        mode: '0755'
+
+    - name: Installer  K3s sur les Worker
+      shell: /tmp/install-k3s.sh
+      environment:
+        K3S_URL: "https://{{ hostvars['k3s-master']['master_ip'] }}:6443"
+        K3S_TOKEN: "{{ hostvars['k3s-master']['k3s_token'] }}"

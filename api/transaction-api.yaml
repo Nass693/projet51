@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-api
+  labels:
+    app: transaction-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: transaction-api
+  template:
+    metadata:
+      labels:
+        app: transaction-api
+    spec:
+      imagePullSecrets:
+      - name: nass-imp  
+      containers:
+      - name: transaction-api
+        image: europe-west9-docker.pkg.dev/arched-media-447008-i1/my-repo/transaction-api:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DATABASE_URL
+          value: "mongodb://mongodb-0.mongodb-service:27017,mongodb-1.mongodb-service:27017,mongodb-2.mongodb-service:27017/transactions?replicaSet=rs0&authSource=admin"
+        - name: MONGO_KEYFILE_PATH
+          value: "/etc/mongodb-keyfile/mongodb-keyfile"
+        volumeMounts:
+        - name: mongodb-keyfile
+          mountPath: "/etc/mongodb-keyfile"
+          readOnly: true
+      volumes:
+      - name: mongodb-keyfile
+        secret:
+          secretName: mongodb-keyfile
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-api-service
+spec:
+  selector:
+    app: transaction-api
+  ports:
+    - protocol: TCP
+      port: 5006
+      targetPort: 5006
+  type: ClusterIP

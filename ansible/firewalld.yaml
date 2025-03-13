@@ -1,0 +1,41 @@
+---
+- name: Start et enable firewalld 
+  hosts: all
+  become: yes
+  tasks:
+    - name: Activer firewalld service
+      systemd:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: s'assurer que firewalld est démarré
+      systemd:
+        name: firewalld
+        state: started
+
+    - name: activer firewalld au démarage
+      systemd:
+        name: firewalld
+        enabled: yes
+
+    - name: autoriser le ssh 
+      firewalld:
+        service: ssh
+        permanent: yes
+        state: enabled
+
+    - name: Autoriser K3s
+      firewalld:
+        port: 6443/tcp
+        permanent: yes
+        state: enabled
+
+    - name: Autoriser MongoDB
+      firewalld:
+        port: 27017/tcp
+        permanent: yes
+        state: enabled
+
+    - name: Reload le firewall
+      command: firewall-cmd --reload

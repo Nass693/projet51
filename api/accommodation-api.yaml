@@ -1,0 +1,50 @@
+## Fichier Nassim en attente Nizar ##
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: accommodation-api
+  labels:
+    app: accommodation-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: accommodation-api
+  template:
+    metadata:
+      labels:
+        app: accommodation-api
+    spec:
+      imagePullSecrets:
+        - name: nass-imp
+      containers:
+        - name: accommodation-api
+          image: europe-west9-docker.pkg.dev/arched-media-447008-i1/my-repo/accommodation-api:latest
+          ports:
+            - containerPort: 5000
+          env:
+            - name: DATABASE_URL
+              value: "mongodb://mongodb-0.mongodb-service:27017,mongodb-1.mongodb-service:27017,mongodb-2.mongodb-service:27017/transactions?replicaSet=rs0&authSource=admin"
+            - name: MONGO_KEYFILE_PATH
+              value: "/etc/mongodb-keyfile/mongodb-keyfile"
+          volumeMounts:
+            - name: mongodb-keyfile
+              mountPath: "/etc/mongodb-keyfile"
+              readOnly: true
+      volumes:
+        - name: mongodb-keyfile
+          secret:
+            secretName: mongodb-keyfile
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: accommodation-api-service
+spec:
+  selector:
+    app: accommodation-api
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+  type: ClusterIP
